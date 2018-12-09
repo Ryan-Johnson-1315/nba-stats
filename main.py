@@ -1,3 +1,3 @@
 from Line import *
 
-Line()
+LineCmd().cmdloop()
