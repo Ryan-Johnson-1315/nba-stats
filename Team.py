@@ -1,8 +1,33 @@
 from nba_api.stats.static.teams import find_teams_by_nickname
 from nba_api.stats.endpoints.boxscoretraditionalv2 import *
 from nba_api.stats.endpoints.teamgamelog import *
+import cmd
 
-class Team():
+class TeamCmd(cmd.Cmd):
+    def __init__(self, teams):
+        cmd.Cmd.__init__(self)
+        prompt = 'Teams'
+        for i in teams.keys():
+            prompt += '_'
+            prompt += i
+        prompt += ' > '
+        cmd.Cmd.prompt = prompt
+
+    def do_else(self, line):
+        other().cmdloop()
+
+    def do_back(self, line):
+        return -1
+
+    def default(self, line):
+        print(f"{line}. Invalid syntax")
+
+class other(cmd.Cmd):
+    prompt = "OTHER: "
+    def do_goback(self, line):
+        return -1
+
+class Team:
 
     """Need to figure out a way to run the data once, then print it multiple times
     if it is called multiple times"""
@@ -40,8 +65,7 @@ class Team():
         self.diff = {key: 0 for key in self.keys}
 
         if not len(self.team_dict):
-            print("Cannot find team")
-            return
+            raise Exception
         else:
             self.team_id = self.team_dict[0]['id']
             self.team_nickname = self.team_dict[0]['nickname']
@@ -77,20 +101,23 @@ class Team():
                 self.losses += 1
                 home_won = False
                 self.teams_lost.append(self.game_ids[i][1])
-
-            for team in game:
-                for key in self.keys:
-                    if t == 0:
-                        if home_won:
-                            self.home_team_w[key] += team[key]
+            try:
+                for team in game:
+                    for key in self.keys:
+                        if t == 0:
+                            if home_won:
+                                self.home_team_w[key] += team[key]
+                            else:
+                                self.home_team_l[key] += team[key]
                         else:
-                            self.home_team_l[key] += team[key]
-                    else:
-                        if home_won:
-                            self.away_team_l[key] += team[key]
-                        else:
-                            self.away_team_w[key] += team[key]
-                t += 1
+                            if home_won:
+                                self.away_team_l[key] += team[key]
+                            else:
+                                self.away_team_w[key] += team[key]
+                    t += 1
+            except Exception:
+                print(f"Stats have not been posted for {team['TEAM_NAME']} yet")
+                raise ValueError("No Stats")
             i += 1
         self.n_games_found = True
 

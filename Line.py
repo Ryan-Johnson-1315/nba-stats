@@ -13,37 +13,51 @@ from nba_api.stats.endpoints.commonteamroster import *
     back one 'menu step'. This in turn will exit the program
 """
 
-class Line_cmd(cmd.Cmd):
+
+class LineCmd(cmd.Cmd):
+    prompt = 'Stats > '
+
     def __init__(self):
         cmd.Cmd.__init__(self)
         cmd.Cmd.prompt = 'Stats > '
-        self.teams = dict()  # Name of team, then data
 
-    def do_team(self, line):
+    def do_t(self, line):
+        teams = dict()  # Name of team, then data
         line = line.split(' ')
         n_games = line[-1]
+
         try:
             n_games = int(n_games[-1:])
             line = line[0:-1]
-            print()
         except Exception:
             self.default(f'team {line}')
             self.cmdloop()
 
+        found_teams = True
         for team in line:
             try:
                 tmp = Team(team, n_games)
-                self.teams[team] = tmp
+                teams[team] = tmp
                 print(f"Loaded {team} stats")
             except Exception:
                 print(f"Unable to load {team} stats")
-                continue
-        print()
+                found_teams = False
+
+        if found_teams:
+            TeamCmd(teams).cmdloop()
+        else:
+            self.cmdloop()
 
     def default(self, line):
         print(f'{line}. Not a recognized command')
 
-class Line():
+    def do_exit(self, line):
+        self.postloop()
+
+    def postloop(self):
+        exit("Thanks!")
+        
+class Line:
     def __init__(self):
         self.current_team = Team(None, None)
         current_command = self.get()
@@ -64,7 +78,7 @@ class Line():
 
         if current_command[0] == "..":
             exit("Thank you for using this excellent software")
-        elif current_command[0]== 'ls':
+        elif current_command[0] == 'ls':
             print(f"'team_nickname' -'n number of games'")
             self.run(self.get())
         elif len(current_command) < 2:
