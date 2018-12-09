@@ -1,6 +1,8 @@
 from Team import *
 from Player import *
 
+import cmd
+
 from nba_api.stats.endpoints.commonteamroster import *
 """
     This class emulates the command line. It uses the function
@@ -11,8 +13,37 @@ from nba_api.stats.endpoints.commonteamroster import *
     back one 'menu step'. This in turn will exit the program
 """
 
+class Line_cmd(cmd.Cmd):
+    def __init__(self):
+        cmd.Cmd.__init__(self)
+        cmd.Cmd.prompt = 'Stats > '
+        self.teams = dict()  # Name of team, then data
 
-class Line:
+    def do_team(self, line):
+        line = line.split(' ')
+        n_games = line[-1]
+        try:
+            n_games = int(n_games[-1:])
+            line = line[0:-1]
+            print()
+        except Exception:
+            self.default(f'team {line}')
+            self.cmdloop()
+
+        for team in line:
+            try:
+                tmp = Team(team, n_games)
+                self.teams[team] = tmp
+                print(f"Loaded {team} stats")
+            except Exception:
+                print(f"Unable to load {team} stats")
+                continue
+        print()
+
+    def default(self, line):
+        print(f'{line}. Not a recognized command')
+
+class Line():
     def __init__(self):
         self.current_team = Team(None, None)
         current_command = self.get()
@@ -23,6 +54,7 @@ class Line:
             like to see stats for the team or player. 
             Commands:
                     'nickname -n': Starts the program and loads the stats for the specified team.
+                    'nickname -n -c': Compares 2 teams of the last n games.
                     '..':          Exits the program.           
     """
 
@@ -32,6 +64,9 @@ class Line:
 
         if current_command[0] == "..":
             exit("Thank you for using this excellent software")
+        elif current_command[0]== 'ls':
+            print(f"'team_nickname' -'n number of games'")
+            self.run(self.get())
         elif len(current_command) < 2:
             print(f"{invalid_command} is not a valid command")
             self.run(self.get())
@@ -39,13 +74,16 @@ class Line:
             print(f"{invalid_command} is not a valid command")
             self.run(self.get())
         else:
-            n_games = current_command[1][1:]
-            nick_name = current_command[0]
-            self.current_team = Team(nick_name, n_games)
-            if not self.current_team.found_team():
+            try:
+                n_games = current_command[1][1:]
+                nick_name = current_command[0]
+                self.current_team = Team(nick_name, n_games)
+                if not self.current_team.found_team():
+                    self.run(self.get(team_options=False))
+                self.team_options()
                 self.run(self.get(team_options=False))
-            self.team_options()
-            self.run(self.get(team_options=False))
+            except Exception:
+                self.run(self.get(team_options=False))
     """
             This class emulates the team options. It will display the corresponding teams stats
             over the last n games.
@@ -70,6 +108,8 @@ class Line:
             self.player_options()
         elif command == 'players -c':
             self.player_options(True)
+        elif command == 'ls':
+            print("show last\nanalyze\nanalyze -d\nplayers\nplayers -c")
         elif command == '..':
             return
         else:
@@ -102,6 +142,9 @@ class Line:
         if int(command) < 0 or int(command) > len(players):
             print(f"{command} is an invalid command")
             self.player_options()
+        elif command == 'ls':
+            print("Enter the player number to see")
+            self.player_options()
         elif command == '..':
             return
 
@@ -126,7 +169,7 @@ class Line:
         else:
             self.player_options()
     """
-        This class emulates the player stats options. 
+        This class emulates the player stats options.
         Commands:
                 'display':     This will display the last n games for the players stats,
                                it will also show the difference.
@@ -144,6 +187,8 @@ class Line:
                 player1.display_diff()
             elif command == "..":
                 return
+            elif command == 'ls':
+                print("display\ndisplay -d")
             else:
                 print(f"{command} is not a valid command")
 
