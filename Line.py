@@ -2,6 +2,7 @@ from Team import *
 from Player import *
 
 import cmd
+import pandas as pd
 
 from nba_api.stats.endpoints.commonteamroster import *
 """
@@ -14,12 +15,16 @@ from nba_api.stats.endpoints.commonteamroster import *
 """
 
 
+
 class LineCmd(cmd.Cmd):
     prompt = 'Stats > '
 
     def __init__(self):
         cmd.Cmd.__init__(self)
         cmd.Cmd.prompt = 'Stats > '
+        self.doc_header = ''
+        self.undoc_header = ''
+
 
     def do_t(self, line):
         teams = dict()  # Name of team, then data
@@ -34,13 +39,13 @@ class LineCmd(cmd.Cmd):
             self.cmdloop()
 
         found_teams = True
-        for team in line:
+        for team_nickname in line:
             try:
-                tmp = Team(team, n_games)
-                teams[team] = tmp
-                print(f"Loaded {team} stats")
+                tmp = Team(team_nickname, n_games)
+                teams[team_nickname] = tmp
+                print(f"Loaded {team_nickname} stats")
             except Exception:
-                print(f"Unable to load {team} stats")
+                print(f"Unable to load {team_nickname} stats")
                 found_teams = False
 
         if found_teams:
@@ -56,7 +61,8 @@ class LineCmd(cmd.Cmd):
 
     def postloop(self):
         exit("Thanks!")
-        
+
+
 class Line:
     def __init__(self):
         self.current_team = Team(None, None)
