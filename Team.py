@@ -1,26 +1,9 @@
 from nba_api.stats.static.teams import find_teams_by_nickname
 from nba_api.stats.endpoints.boxscoretraditionalv2 import *
 from nba_api.stats.endpoints.teamgamelog import *
+from nba_api.stats.endpoints.commonteamroster import *
 import cmd
-
-class TeamCmd(cmd.Cmd):
-    def __init__(self, teams):
-        cmd.Cmd.__init__(self)
-        prompt = 'Teams'
-        for i in teams.keys():
-            prompt += '_'
-            prompt += i
-        prompt += ' > '
-        cmd.Cmd.prompt = prompt
-
-    def do_else(self, line):
-        other().cmdloop()
-
-    def do_back(self, line):
-        return -1
-
-    def default(self, line):
-        print(f"{line}. Invalid syntax")
+from Player import *
 
 class other(cmd.Cmd):
     prompt = "OTHER: "
@@ -51,6 +34,7 @@ class Team:
         self.teams_lost = list()
         self.team_found = False
         self.n_ids = list()
+        self.roster = None
 
         self.keys = ["FGM", "FGA", "FG_PCT",
                      "FG3M", "FG3A", "FG3_PCT",
@@ -148,40 +132,44 @@ class Team:
         # When jazz won:
         won = self.totals[0:2]
         lost = self.totals[2:4]
-        i = 0
-        st = ""
-        for w in self.teams_beaten:
-            st += w + ", "
-        print(f"{self.wins} games won: {st}")
-        for games in won:
-            if i == 0:
-                print(f"{self.team_nickname} -> ", end="")
-            else:
-                print("Opponent -> ", end="")
-            for stats in games:
-                self.print(f"{stats}: {format(games[stats], '.2f')}")
-            i += 1
-            print()
-        print()
-        self.difference(self.home_team_w, self.away_team_l, won=True)
-        print()  # space it out
-        i = 0
-        st = ""
-        for w in self.teams_lost:
-            st += w + ", "
-        print(f"{self.losses} games lost: {st}")
-        for games in lost:
-            if i == 0:
-                print(f"{self.team_nickname} -> ", end="")
-            else:
-                print("Opponent -> ", end="")
 
-            for stats in games:
-                self.print(f"{stats}: {format(games[stats], '.2f')}")
-            i += 1
+        i = 0
+        st = ""
+        if self.wins:
+            for w in self.teams_beaten:
+                st += w + ", "
+            print(f"{self.wins} games won: {st}")
+            for games in won:
+                if i == 0:
+                    print(f"{self.team_nickname} -> ", end="")
+                else:
+                    print("Opponent -> ", end="")
+                for stats in games:
+                    self.print(f"{stats}: {format(games[stats], '.2f')}")
+                i += 1
+                print()
             print()
-        print()
-        self.difference(self.home_team_l, self.away_team_w)
+            self.difference(self.home_team_w, self.away_team_l, won=True)
+            print()  # space it out
+
+        i = 0
+        st = ""
+        if self.losses:
+            for w in self.teams_lost:
+                st += w + ", "
+            print(f"{self.losses} games lost: {st}")
+            for games in lost:
+                if i == 0:
+                    print(f"{self.team_nickname} -> ", end="")
+                else:
+                    print("Opponent -> ", end="")
+
+                for stats in games:
+                    self.print(f"{stats}: {format(games[stats], '.2f')}")
+                i += 1  # Used to increment the team
+                print()
+            print()
+            self.difference(self.home_team_l, self.away_team_w)
         print(f"Record: {self.wins}-{self.losses}")
         print()
 
@@ -199,6 +187,9 @@ class Team:
                 print()
             print()
             i += 1
+
+    def get_roster(self):
+        return CommonTeamRoster(self.team_id).get_normalized_dict()['CommonTeamRoster']
 
     def get_team_id(self):
         return self.team_id
@@ -225,3 +216,78 @@ class Team:
 
     def game_ids(self):
         return self.n_ids
+
+
+class TeamCmd(cmd.Cmd):
+    def __init__(self, teams):
+        cmd.Cmd.__init__(self)
+        prompt = 'Teams'
+        for i in teams.keys():
+            prompt += '_'
+            prompt += i
+            self.last_team = i
+        prompt += ' > '
+        cmd.Cmd.prompt = prompt
+        self.doc_header = ''
+        self.teams = teams
+        self.undoc_header = ''
+
+    def do_stats(self, line):
+        dif = False
+        try:
+            if line[-1] == 'd':
+                dif = True
+        except Exception:
+            pass  # Didn't want to see difference
+
+        for i in self.teams.keys():
+            print(self.teams[i].get_team_nickname())
+            self.teams[i].print_analysis(diff=dif)
+
+    def do_players(self, line):
+        rosters = list()
+        n_games = self.teams[self.last_team].get_n_games()  # Doesn't matter which team, both will have the same n games
+        for i in self.teams.keys():
+            rosters.append(self.teams[i].get_roster())
+        num = 1
+
+
+        for roster in rosters:
+            for players in roster:
+                print(f"{num}: {players['PLAYER']} ({players['NUM']})")
+                num += 1
+            print("--------------------")
+        print("Enter players")
+        selections = list()
+
+        while True:
+            print(f"Enter players - Enter 0 when done")
+
+            current = int(input()) - 1
+            if current == -1:
+                break
+            else:
+                selections.append(current)
+
+        players = list()
+
+        for selection in selections:
+            i = 0
+            while True:
+                if selection > len(rosters[i]):
+                    selection -= len(rosters[i])
+                    i += 1
+                else:
+                    break
+            players.append(Player(rosters[i][selection], n_games))
+
+        PlayerCmd(players).cmdloop()
+
+    def do_else(self, line):
+        other().cmdloop()
+
+    def do_back(self, line):
+        return -1
+
+    def default(self, line):
+        print(f"{line}. Invalid syntax")
