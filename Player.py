@@ -1,5 +1,35 @@
 from nba_api.stats.endpoints.playerdashboardbylastngames import *
 from nba_api.stats.endpoints.playergamelog import *
+import cmd
+
+class PlayerCmd(cmd.Cmd):
+    def __init__(self, players):
+        super().__init__()
+        self.current_players = players
+        if len(self.current_players) > 1:
+            self.prompt = 'Player_Compare > '
+        else:
+            self.prompt = 'Player_Stats > '
+
+        self.doc_header = ''
+        self.undoc_header = ''
+
+    def do_stats(self, line):
+        dif = False
+        try:
+            if line[-1] == 'd':
+                dif = True
+        except Exception:
+            pass  # Didn't want to see difference
+
+        for player in self.current_players:
+            player.display_stats(diff=dif)
+            print()
+            print()
+
+    def do_back(self, line):
+        return -1
+
 
 class Player:
     def __init__(self, player, n_games):
@@ -41,8 +71,12 @@ class Player:
                 else:
                     self.stats_l[key] += game[key]
 
-    def display_stats(self):
+    def display_stats(self, diff=False):
         print(f"{self.player_name}: {self.wins} - {self.losses}")
+
+        if diff:
+            self.display_diff()
+            return
 
         print("Wins: ", end="")
         for stats in self.keys:
@@ -56,6 +90,8 @@ class Player:
                 self.stats_l[stats] /= self.losses
             self.print(f"{stats}: {format(self.stats_l[stats], '.2f')}")
         print()
+
+        self.display_diff()
 
     def display_diff(self):
         for stat in self.keys:
