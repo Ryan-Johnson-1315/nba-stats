@@ -2,13 +2,80 @@ from nba_api.stats.static.teams import find_teams_by_nickname
 from nba_api.stats.endpoints.boxscoretraditionalv2 import *
 from nba_api.stats.endpoints.teamgamelog import *
 from nba_api.stats.endpoints.commonteamroster import *
-import cmd
 from Player import *
 
-class other(cmd.Cmd):
-    prompt = "OTHER: "
-    def do_goback(self, line):
+
+class TeamCmd(cmd.Cmd):
+    def __init__(self, teams):
+        cmd.Cmd.__init__(self)
+        prompt = 'Teams'
+        for i in teams.keys():
+            prompt += '_'
+            prompt += i
+            self.last_team = i
+        prompt += ' > '
+        cmd.Cmd.prompt = prompt
+        self.doc_header = ''
+        self.teams = teams
+        self.undoc_header = ''
+
+    def do_stats(self, line):
+        dif = False
+        try:
+            if line[-1] == 'd':
+                dif = True
+        except Exception:
+            pass  # Didn't want to see difference
+
+        for i in self.teams.keys():
+            print(self.teams[i].get_team_nickname())
+            self.teams[i].print_analysis(diff=dif)
+
+    def do_players(self, line):
+        rosters = list()
+        n_games = self.teams[self.last_team].get_n_games()  # Doesn't matter which team, both will have the same n games
+        for i in self.teams.keys():
+            rosters.append(self.teams[i].get_roster())
+        num = 1
+
+
+        for roster in rosters:
+            for players in roster:
+                print(f"{num}: {players['PLAYER']} ({players['NUM']})")
+                num += 1
+            print("--------------------")
+        print("Enter players")
+        selections = list()
+
+        while True:
+            print(f"Enter players - Enter 0 when done")
+
+            current = int(input()) - 1
+            if current == -1:
+                break
+            else:
+                selections.append(current)
+
+        players = list()
+
+        for selection in selections:
+            i = 0
+            while True:
+                if selection > len(rosters[i]):
+                    selection -= len(rosters[i])
+                    i += 1
+                else:
+                    break
+            players.append(Player(rosters[i][selection], n_games))
+
+        PlayerCmd(players).cmdloop()
+
+    def do_back(self, line):
         return -1
+
+    def default(self, line):
+        print(f"{line}. Invalid syntax")
+
 
 class Team:
 
@@ -217,77 +284,3 @@ class Team:
     def game_ids(self):
         return self.n_ids
 
-
-class TeamCmd(cmd.Cmd):
-    def __init__(self, teams):
-        cmd.Cmd.__init__(self)
-        prompt = 'Teams'
-        for i in teams.keys():
-            prompt += '_'
-            prompt += i
-            self.last_team = i
-        prompt += ' > '
-        cmd.Cmd.prompt = prompt
-        self.doc_header = ''
-        self.teams = teams
-        self.undoc_header = ''
-
-    def do_stats(self, line):
-        dif = False
-        try:
-            if line[-1] == 'd':
-                dif = True
-        except Exception:
-            pass  # Didn't want to see difference
-
-        for i in self.teams.keys():
-            print(self.teams[i].get_team_nickname())
-            self.teams[i].print_analysis(diff=dif)
-
-    def do_players(self, line):
-        rosters = list()
-        n_games = self.teams[self.last_team].get_n_games()  # Doesn't matter which team, both will have the same n games
-        for i in self.teams.keys():
-            rosters.append(self.teams[i].get_roster())
-        num = 1
-
-
-        for roster in rosters:
-            for players in roster:
-                print(f"{num}: {players['PLAYER']} ({players['NUM']})")
-                num += 1
-            print("--------------------")
-        print("Enter players")
-        selections = list()
-
-        while True:
-            print(f"Enter players - Enter 0 when done")
-
-            current = int(input()) - 1
-            if current == -1:
-                break
-            else:
-                selections.append(current)
-
-        players = list()
-
-        for selection in selections:
-            i = 0
-            while True:
-                if selection > len(rosters[i]):
-                    selection -= len(rosters[i])
-                    i += 1
-                else:
-                    break
-            players.append(Player(rosters[i][selection], n_games))
-
-        PlayerCmd(players).cmdloop()
-
-    def do_else(self, line):
-        other().cmdloop()
-
-    def do_back(self, line):
-        return -1
-
-    def default(self, line):
-        print(f"{line}. Invalid syntax")
