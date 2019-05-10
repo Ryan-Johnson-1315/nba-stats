@@ -38,7 +38,6 @@ class TeamCmd(cmd.Cmd):
             rosters.append(self.teams[i].get_roster())
         num = 1
 
-
         for roster in rosters:
             for players in roster:
                 print(f"{num}: {players['PLAYER']} ({players['NUM']})")

@@ -10,6 +10,10 @@ import cmd
     back one 'menu step'. This in turn will exit the program
 """
 
+'''
+    need to go through and document this. This is pretty bad.
+'''
+
 
 
 class LineCmd(cmd.Cmd):
